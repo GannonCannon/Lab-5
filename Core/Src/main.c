@@ -66,9 +66,51 @@ int main(void)
   HAL_Init();
   SystemClock_Config();
 
-	// Enable I2C
-	RCC_APB1ENR_I2C1EN;
-	// Configure I2C
+	// I2C2 Initialization
+		// Enable I2C2 peripheral clock
+		RCC->APB1ENR |= RCC_APB1ENR_I2C2EN;
+		// Configure I2C2 bus timing 
+			// Set PRESC to 1
+			I2C2->TIMINGR |= (1 << 28);
+			// Set SCLL to 0x13
+			I2C2->TIMINGR |= 0x13;
+			// Set SCLH to 0xF
+			I2C2->TIMINGR |= (0xF << 8);
+			// Set SDADEL to 0x2
+			I2C2->TIMINGR |= (0x2 << 16);
+			// Set SCLDEL to 0x4
+			I2C2->TIMINGR |= (0x4 << 20);	
+		// Enable peripheral / set PE bit
+		I2C2->CR1 |= (1 << 0);
+	
+	// GPIO Initialization
+		// Enable GPIOB & GPIOC
+		RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+		RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+		//Set PB11 to alternate function mode - I2C2_SDA (AF1, 0001)
+		GPIOB->MODER |= (1 << 23);
+		GPIOB->OTYPER |= (1 << 11);
+		GPIOB->AFR[1] &= ~(1 << 13) | (1 << 14) | (1 << 15);
+		GPIOB->AFR[1] |= (1 << 12);
+		// Set PB13 to alternate function mode - I2C2_SCL (AF5, 0101)
+		GPIOB->MODER |= (1 << 27);
+		GPIOB->OTYPER |= (1 << 13);
+		GPIOB->AFR[1] &= ~(1 << 23) | (1 << 21);
+		GPIOB->AFR[1] |= (1 << 20) | (1 << 22);
+		// PB14 initialization
+		GPIOB->MODER |= (1 << 28);
+		GPIOB->OTYPER &= ~(1 << 14);
+			// Initialize pin high
+			GPIOB->ODR = (1 << 14);
+		// PC0 initialization
+		GPIOC->MODER |= (1 << 0);
+		GPIOC->OTYPER &= ~(1 << 0);
+			//Initialize pin high
+			GPIOC->ODR = (1 << 0);
+		
+	
+		
+	
 	
   while (1)
   {
