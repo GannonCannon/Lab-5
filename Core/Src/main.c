@@ -31,7 +31,9 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+	int TXIScheck = 0;
+	int TCcheck = 0;
+	int RXNEcheck = 0;
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -107,16 +109,105 @@ int main(void)
 		GPIOC->OTYPER &= ~(1 << 0);
 			//Initialize pin high
 			GPIOC->ODR = (1 << 0);
-		
-	
-		
+
+	// Configure LED Pins
+		// Output Mode - General purpose output mode
+		GPIOC->MODER |= (1 << 12) | (1 << 14) | (1 << 16) | (1 << 18);
+		GPIOC->MODER &= ~(1 << 13) | (1 << 15) | (1 << 17) | (1 << 19);
+		// Output Type - push-pull
+		GPIOC->OTYPER &= ~(1 << 12) | (1 << 13) | (1 << 14) | (1 << 15);
+		// Output Speed - low
+		GPIOC->OSPEEDR &= ~(1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) | (1 << 16) | (1 << 17) | (1 << 18) | (1 << 19);
+		// PU / PD - PD
+		GPIOC->PUPDR &= ~(1 << 12) | (1 << 13) | (1 << 14) | (1 << 15) | (1 << 16) | (1 << 17) | (1 << 18) | (1 << 19);
+		// Initialize pin logic - low for all
+		GPIOC->ODR &= ~(1 << 6); // Red
+		GPIOC->ODR &= ~(1 << 7); // Blue
+		GPIOC->ODR &= ~(1 << 8); // Orange
+		GPIOC->ODR &= ~(1 << 9); // Green
 	
 	
   while (1)
   {
-    /* USER CODE END WHILE */
+		// 5.4
+			// Set CR2 transaction parameters
+				// Set slave address to 0x6B
+				I2C2->CR2 |= (0x69 << 1);
+				// Set # bytes to be transmitted to 1
+				I2C2->CR2 |= (1 << 16);
+				// Set RD_WRN to indicate a write operation
+				I2C2->CR2 &= ~ (1 << 10);
+				// Set start bit
+				I2C2->CR2 |= (1 << 13);
+			
+			// Wait for TXIS flag to be set
+		TXIScheck = I2C2->ISR & (1 << 1);
+			while (TXIScheck == 0) {
+				// Check current value of flag
+				TXIScheck = I2C2->ISR & (1 << 1);
+				// Flip red LED if not set
+				GPIOC->ODR ^= (1 << 6);
+				// Short delay to prevent constant flipping
+				HAL_Delay(50);
+			}
+			
+			// Write address of WHO_AM_I register to I2C transmit register (0x0F)
+			I2C2->TXDR = 0x0F;
+			
+			// Wait for TC flag
+			TCcheck = I2C2->ISR & (1 << 6);
+			while (TCcheck == 0) { 
+				TCcheck = I2C2->ISR & (1 << 6);
+				// Flip blue LED if not set
+				GPIOC->ODR ^= (1 << 7);
+				// Short delay to prevent constant flipping
+				HAL_Delay(50);
+			}
+			
+			// Reload CR2 Register w/ read operation
+				// Set slave address to 0x6B
+				I2C2->CR2 |= (0x6B << 0);
+				// Set # bytes to be transmitted to 1
+				I2C2->CR2 |= (1 << 16);
+				// Set RD_WRN to indicate a read operation
+				I2C2->CR2 |= (1 << 10);
+				// Set start bit
+				I2C2->CR2 |= (1 << 13);
+			
+			// Wait for RXNE flag
+			RXNEcheck = I2C2->ISR & (1 << 2);
+			while (RXNEcheck == 0) { 
+				RXNEcheck = I2C2->ISR & (1 << 2);
+				// Flip orange LED if not set
+				GPIOC->ODR ^= (1 << 8);
+				// Short delay to prevent constant flipping
+				HAL_Delay(50);
+			}
 
-    /* USER CODE BEGIN 3 */
+			// Wait for TC flag
+			TCcheck = I2C2->ISR & (1 << 6);
+			while (TCcheck == 0) { 
+				TCcheck = I2C2->ISR & (1 << 6);
+				// Flip blue LED if not set
+				GPIOC->ODR ^= (1 << 7);
+				HAL_Delay(50);
+			}
+			
+			// Check if RXDR register matches 0xD4
+			if (I2C1->RXDR == 0xD4)  {
+				// Turn on green LED
+				GPIOC->ODR |= (1 << 9);
+				// Set STOP bit in CR2
+				I2C2->CR2 |= (1 << 14);
+				break;
+			}
+			else {
+				continue;
+			}
+			
+		
+		
+		
   }
   /* USER CODE END 3 */
 }
