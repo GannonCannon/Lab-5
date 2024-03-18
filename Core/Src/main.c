@@ -131,12 +131,12 @@ int main(void)
   {
 		// 5.4
 			// Set CR2 transaction parameters
-				// Set slave address to 0x6B
+				// Set slave address to 0x69
 				I2C2->CR2 |= (0x69 << 1);
 				// Set # bytes to be transmitted to 1
 				I2C2->CR2 |= (1 << 16);
 				// Set RD_WRN to indicate a write operation
-				I2C2->CR2 &= ~ (1 << 10);
+				I2C2->CR2 &= ~(1 << 10);
 				// Set start bit
 				I2C2->CR2 |= (1 << 13);
 			
@@ -159,14 +159,16 @@ int main(void)
 			while (TCcheck == 0) { 
 				TCcheck = I2C2->ISR & (1 << 6);
 				// Flip blue LED if not set
-				GPIOC->ODR ^= (1 << 7);
+				GPIOC->ODR ^= (1 << 7);				
 				// Short delay to prevent constant flipping
 				HAL_Delay(50);
 			}
+
+			TCcheck = 0;
 			
 			// Reload CR2 Register w/ read operation
-				// Set slave address to 0x6B
-				I2C2->CR2 |= (0x6B << 0);
+				// Set slave address to 0x69
+				I2C2->CR2 |= (0x69 << 1);
 				// Set # bytes to be transmitted to 1
 				I2C2->CR2 |= (1 << 16);
 				// Set RD_WRN to indicate a read operation
@@ -185,16 +187,18 @@ int main(void)
 			}
 
 			// Wait for TC flag
-			TCcheck = I2C2->ISR & (1 << 6);
+			// TCcheck = I2C2->ISR & (1 << 6);
 			while (TCcheck == 0) { 
 				TCcheck = I2C2->ISR & (1 << 6);
 				// Flip blue LED if not set
-				GPIOC->ODR ^= (1 << 7);
+				GPIOC->ODR ^= (1 << 7);				
 				HAL_Delay(50);
 			}
+			// Turn off blue LED
+			GPIOC->ODR &= ~(1 << 7);
 			
-			// Check if RXDR register matches 0xD4
-			if (I2C1->RXDR == 0xD4)  {
+			// Check if RXDR register matches 0xD3
+			if (I2C2->RXDR == 0xD3)  {
 				// Turn on green LED
 				GPIOC->ODR |= (1 << 9);
 				// Set STOP bit in CR2
