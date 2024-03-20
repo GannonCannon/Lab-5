@@ -27,11 +27,15 @@ Project File Date:  03/11/2024
 <h2>Output:</h2>
 *** Using Compiler 'V6.21', folder: 'C:\Keil_v5\ARM\ARMCLANG\Bin'
 Build target 'Lab 5 Source'
+../Core/Src/main.c(243): error: invalid suffix 'h' on integer constant
+  243 |                 totalX = (read(0x69, 0x28h) << 8);
+      |                                          ^
+../Core/Src/main.c(244): error: invalid suffix 'h' on integer constant
+  244 |                 totalX |= read(0X69, 0x29h);
+      |                                          ^
+2 errors generated.
 compiling main.c...
-linking...
-Program Size: Code=4430 RO-data=274 RW-data=12 ZI-data=1668  
-FromELF: creating hex file...
-"Lab 5 Source\Lab 5 Source.axf" - 0 Error(s), 0 Warning(s).
+"Lab 5 Source\Lab 5 Source.axf" - 2 Error(s), 0 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -55,7 +59,8 @@ Package Vendor: Keil
 
    * Component: ARM::CMSIS:CORE@5.6.0
       Include file:  CMSIS/Core/Include/tz_context.h
-Build Time Elapsed:  00:00:01
+Target not created.
+Build Time Elapsed:  00:00:00
 </pre>
 </body>
 </html>
