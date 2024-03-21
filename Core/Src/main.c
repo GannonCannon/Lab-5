@@ -45,38 +45,38 @@
 	
 	// Write method
 	
-	void write(uint8_t slaveAddress, uint8_t data) {
-			// Set slave address
+	void write(uint8_t slaveAddress, uint8_t data[], uint8_t numBytes) {
+			I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
+		// Set slave address
 			I2C2->CR2 |= (slaveAddress << 1);
 			// Set # bytes to be transmitted to 1 (hardcoded)
-			I2C2->CR2 |= (1 << 16);
+			I2C2->CR2 |= (numBytes << 16);
 			// Set RD_WRN to indicate a write operation
 			I2C2->CR2 &= ~(1 << 10);
 			// Set start bit
 			I2C2->CR2 |= (1 << 13);
-			// Wait for TXIS or NACKF to be set
-			while(!(I2C2->ISR & 0x12)) {
+			// Wait for TXIS 
+			while(!(I2C2->ISR & 1 << 1)) {
 				// flip red LED (debug)
 				GPIOC->ODR ^= (1 << 6);
 			}
 			// Turn red LED off
 			GPIOC->ODR &= ~(1 << 6);
-			// Write data to TXDR registry
-			I2C2->TXDR = data;
 			// Wait for TC to be set
-			while(!(I2C2->ISR & 0x40)) {
-				// flip orange LED (debug)
-				GPIOC->ODR ^= (1 << 8);
+			for (int bytesWritten = 0; bytesWritten < numBytes; bytesWritten++) {
+				while(!(I2C2->ISR & 0x40)) {
+					I2C2->TXDR = data[bytesWritten];
+					GPIOC->ODR ^= (1 << 8);
+				}
 			}
-			// Turn orange LED off
-			GPIOC->ODR &= ~(1 << 8);
-			// Set stop bit
-			I2C2->CR2 |= (1 << 14);
+		// Set stop bit
+		I2C2->CR2 |= (1 << 14);
 	}
 	
 uint8_t read(uint8_t slaveAddress, uint8_t registerAddress) {
 	// Write register address	
 		// Set slave address
+		//I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
 		I2C2->CR2 |= (slaveAddress << 1);
 		// Set # bytes to be transmitted to 1 (hardcoded)
 		I2C2->CR2 |= (1 << 16);
@@ -84,8 +84,8 @@ uint8_t read(uint8_t slaveAddress, uint8_t registerAddress) {
 		I2C2->CR2 &= ~(1 << 10);
 		// Set start bit
 		I2C2->CR2 |= (1 << 13);
-		// Wait for TXIS or NACKF to be set
-		while(!(I2C2->ISR & 0x12)) {
+		// Wait for TXIS 
+		while(!(I2C2->ISR & 1 << 1)) {
 			// flip red LED (debug)
 			GPIOC->ODR ^= (1 << 6);
 		}
@@ -103,6 +103,7 @@ uint8_t read(uint8_t slaveAddress, uint8_t registerAddress) {
 		
 	// Read data at register
 		// Set slave address
+		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
 		I2C2->CR2 |= (slaveAddress << 1);
 		// Set # bytes to be transmitted to 1 (hardcoded)
 		I2C2->CR2 |= (1 << 16);
@@ -126,9 +127,7 @@ uint8_t read(uint8_t slaveAddress, uint8_t registerAddress) {
 		}
 		// Turn orange LED off
 		GPIOC->ODR &= ~(1 << 8);
-			
-		// Set stop bit
-		I2C2->CR2 |= (1 << 14);
+		
 		return readData;
 }
 	
@@ -227,9 +226,10 @@ int main(void)
 	
 	// Initialize gyroscope X and Y axes
 		// Write address of CTRL_REG1 (0x20) to L3GD20
-		write(0x69, 0x20);
-		// Turn sensor to normal / sleep mode, enable X and Y axes (0x0B)
-		write(0x69, 0x0B);
+		uint8_t initData[2] = {0x20, 0x0B};
+		write(0x69, initData , 2);
+		// Turn sensor to nor1mal / sleep mode, enable X and Y axes (0x0B)
+		//write(0x69, 0x0B);
 		// Cycle green LED to acknowledge operation is complete
 		GPIOC->ODR |= (1 << 9);
 		HAL_Delay(100);
@@ -237,9 +237,7 @@ int main(void)
 	
   while (1)
   {
-		HAL_Delay(100);
-		//I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
-		
+		HAL_Delay(100);	
 		// Assemble X value from Xl and Xh registries (0x28 & 0x29)
 		
 		Xl = read(0x69, 0x28);
@@ -247,10 +245,11 @@ int main(void)
 		Yl = read(0x69, 0x2A);
 		Yh = read(0x69, 0x2B);
 		
+		// Set stop bit
+		//I2C2->CR2 |= (1 << 14);
+		
 		totalX = (Xh << 8) | Xl;
 		totalY = (Yh << 8) | Yl;
-		printf("%d", totalX);
-		
 		
 		if (totalY > 1000) {
 			GPIOC->ODR |= (1 << 9);
