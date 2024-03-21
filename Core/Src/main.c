@@ -35,10 +35,10 @@
 	int TCcheck = 0;
 	int RXNEcheck = 0;
 	
-	uint8_t Xh = 0;
 	uint8_t Xl = 0;
-	uint8_t Yh = 0;
 	uint8_t Yl = 0;
+	uint8_t Xh = 0;
+	uint8_t Yh = 0;
 	
 	int16_t totalX = 0;	
 	int16_t totalY = 0;
@@ -110,8 +110,8 @@ uint8_t read(uint8_t slaveAddress, uint8_t registerAddress) {
 		I2C2->CR2 |= (1 << 10);
 		// Set start bit
 		I2C2->CR2 |= (1 << 13);
-		// Wait for TXIS or NACKF to be set
-		while(!(I2C2->ISR & 0x12)) {
+		// Wait for RXNE to be set 
+		while(!(I2C2->ISR & 1 << 2)) {
 			// flip blue LED (debug)
 			GPIOC->ODR |= (1 << 7);
 		}
@@ -119,14 +119,14 @@ uint8_t read(uint8_t slaveAddress, uint8_t registerAddress) {
 		GPIOC->ODR &= ~(1 << 7);
 		// Save contents of RXDR to readData
 		uint8_t readData = I2C2->RXDR;
-		while(!(I2C2->ISR & 0x40)) {
+		// Wait for TC to be set
+		while(!(I2C2->ISR & 1 << 6)) {
 			// flip orange LED (debug)
 			GPIOC->ODR ^= (1 << 8);
 		}
 		// Turn orange LED off
 		GPIOC->ODR &= ~(1 << 8);
-		
-		
+			
 		// Set stop bit
 		I2C2->CR2 |= (1 << 14);
 		return readData;
@@ -230,7 +230,7 @@ int main(void)
 		write(0x69, 0x20);
 		// Turn sensor to normal / sleep mode, enable X and Y axes (0x0B)
 		write(0x69, 0x0B);
-	// Cycle green LED to acknowledge operation is complete
+		// Cycle green LED to acknowledge operation is complete
 		GPIOC->ODR |= (1 << 9);
 		HAL_Delay(100);
 		GPIOC->ODR &= ~(1 << 9);
@@ -238,12 +238,21 @@ int main(void)
   while (1)
   {
 		HAL_Delay(100);
+		//I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
 		
 		// Assemble X value from Xl and Xh registries (0x28 & 0x29)
-		totalX = (read(0x69, 0x28h) << 8);
-		totalX |= read(0X69, 0x29h);
 		
-		if (totalX > 1500) {
+		Xl = read(0x69, 0x28);
+		Xh = read(0x69, 0x29);
+		Yl = read(0x69, 0x2A);
+		Yh = read(0x69, 0x2B);
+		
+		totalX = (Xh << 8) | Xl;
+		totalY = (Yh << 8) | Yl;
+		printf("%d", totalX);
+		
+		
+		if (totalY > 1000) {
 			GPIOC->ODR |= (1 << 9);
 		}
 		else {
