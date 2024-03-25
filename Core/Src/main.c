@@ -236,7 +236,7 @@ int main(void)
 		totalX = (Xh << 8) | Xl;
 		totalY = (Yh << 8) | Yl;
 		
-		
+		// Turn LEDs on or off according to totalX and totalY values
 		if (totalX > 1500) {
 			GPIOC->ODR |= (1 << 9);
 		}
