@@ -55,62 +55,36 @@
 			I2C2->CR2 &= ~(1 << 10);
 			// Set start bit
 			I2C2->CR2 |= (1 << 13);
-			// Wait for TXIS 
-			while(!(I2C2->ISR & 1 << 1)) {
-				// flip red LED (debug)
-				GPIOC->ODR ^= (1 << 6);
-				HAL_Delay(100);
-			}
-			// Turn red LED off
-			GPIOC->ODR &= ~(1 << 6);
-			// Wait for TC to be set
 			for (int bytesWritten = 0; bytesWritten < numBytes; ++bytesWritten) {
-				while(!(I2C2->ISR & 0x40)) {
-					I2C2->TXDR = data[bytesWritten];
-					GPIOC->ODR ^= (1 << 8);
+				// Wait for TXIS flag
+				while(!(I2C2->ISR & 1 << 1)) {
+					// flip red LED (debug)
+					GPIOC->ODR ^= (1 << 6);
+					//HAL_Delay(100);
 				}
+				// Turn red LED off
+				GPIOC->ODR &= ~(1 << 6);
+				I2C2->TXDR = data[bytesWritten];
 			}
-			// Set STOP bit
-			I2C2->CR2 |= (1 << 14);
+			// Check for TC after all writes have been completed
+			while(!(I2C2->ISR & 0x40)) {
+			// Flip orange LED (debug)
+			GPIOC->ODR ^= (1 << 8);
+		}
+			// Turn orange off
+			GPIOC->ODR &= ~(1 << 8); 
+				// Set STOP bit
+				//I2C2->CR2 |= (1 << 14);
 	}
 	
 uint8_t read(uint8_t slaveAddress, uint8_t registerAddress) {
 	
-
-//	// Write register address	
-//		// Set start bit
-//		I2C2->CR2 |= (1 << 13);
-//		// Set slave address
-//		I2C2->CR2 |= (slaveAddress << 1);
-//		// Set # bytes to be transmitted to 1 (hardcoded)
-//		I2C2->CR2 |= (1 << 16);
-//		// Set RD_WRN to indicate a write operation
-//		I2C2->CR2 &= ~(1 << 10);
-//		// Wait for TXIS 
-//		while(!(I2C2->ISR & 1 << 1)) {
-//			// flip red LED (debug)
-//			GPIOC->ODR ^= (1 << 6);
-//		}
-//		// Turn red LED off
-//		GPIOC->ODR &= ~(1 << 6);
-//		// Write data to TXDR registry
-//		I2C2->TXDR = registerAddress;
-//		// Wait for TC to be set
-//		while(!(I2C2->ISR & 0x40)) {
-//			// flip orange LED (debug)
-//			GPIOC->ODR ^= (1 << 8);
-//			HAL_Delay(100); // GETTING STUCK HERE
-//		}
-//		// Turn orange LED off
-//		GPIOC->ODR &= ~(1 << 8);
-
+	I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
 	uint8_t writeData[] = {registerAddress};
 	write(slaveAddress, writeData, 1);
-	I2C2->TXDR = 0;
 		
 	// Read data at register
 		// Set slave address
-		I2C2->CR2 &= ~((0x7F << 16) | (0x3FF << 0));
 		I2C2->CR2 |= (slaveAddress << 1);
 		// Set # bytes to be transmitted to 1 (hardcoded)
 		I2C2->CR2 |= (1 << 16);
@@ -136,7 +110,7 @@ uint8_t read(uint8_t slaveAddress, uint8_t registerAddress) {
 		GPIOC->ODR &= ~(1 << 8);
 		
 		// Set STOP bit
-		I2C2->CR2 |= (1 << 14);
+		//I2C2->CR2 |= (1 << 14);
 		return readData;
 }
 	
@@ -246,26 +220,41 @@ int main(void)
   while (1)
   {
 		HAL_Delay(100);	
-		// Assemble X value from Xl and Xh registries (0x28 & 0x29)
+		// Read X and Y rotation registries (0x28, 0x29, 0x2A, 0x2B)
 		Xl = read(0x69, 0x28);
-		GPIOC->ODR |= (1 << 9);
-		HAL_Delay(100);
-		GPIOC->ODR &= ~(1 << 9);
-		Xh = readMark(0x69, 0x29);
-		GPIOC->ODR |= (1 << 9);
-		HAL_Delay(100);
-		GPIOC->ODR &= ~(1 << 9);
+//		GPIOC->ODR |= (1 << 9);
+//		HAL_Delay(100);
+//		GPIOC->ODR &= ~(1 << 9);
+		Xh = read(0x69, 0x29);
+//		GPIOC->ODR |= (1 << 9);
+//		HAL_Delay(100);
+//		GPIOC->ODR &= ~(1 << 9);
 		Yl = read(0x69, 0x2A);
 		Yh = read(0x69, 0x2B);
 		
+		// Reassemble X and Y values using bitmasking
 		totalX = (Xh << 8) | Xl;
 		totalY = (Yh << 8) | Yl;
 		
-		if (totalY > 1000) {
+		
+		if (totalX > 1500) {
 			GPIOC->ODR |= (1 << 9);
 		}
-		else {
-			GPIOC->ODR &= ~(1 << 9);
+		else if (totalX < -1500)  {
+			GPIOC->ODR |= (1 << 8);
+		}
+		else if ((totalX < 1500) & (totalX > -1500)) {
+			GPIOC->ODR &= ~((1 << 9) | (1 << 8));
+		}
+		
+		if (totalY > 1500) {
+			GPIOC->ODR |= (1 << 6);
+		}
+		else if (totalY < -1500)  {
+			GPIOC->ODR |= (1 << 7);
+		}
+		else if ((totalY < 1500) & (totalY > -1500)) {
+			GPIOC->ODR &= ~((1 << 7) | (1 << 6));
 		}
 		
 
