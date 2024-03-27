@@ -243,7 +243,7 @@ int main(void)
 		else if (totalX < -1500)  {
 			GPIOC->ODR |= (1 << 8);
 		}
-		else if ((totalX < 1500) & (totalX > -1500)) {
+		else {
 			GPIOC->ODR &= ~((1 << 9) | (1 << 8));
 		}
 		
@@ -253,7 +253,7 @@ int main(void)
 		else if (totalY < -1500)  {
 			GPIOC->ODR |= (1 << 7);
 		}
-		else if ((totalY < 1500) & (totalY > -1500)) {
+		else {
 			GPIOC->ODR &= ~((1 << 7) | (1 << 6));
 		}
 		
